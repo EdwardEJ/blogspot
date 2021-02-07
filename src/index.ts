@@ -41,8 +41,6 @@ const main = async () => {
 		})
 	);
 
-	console.log(session.Cookie.maxAge);
-
 	const apolloServer = new ApolloServer({
 		schema: await buildSchema({
 			resolvers: [HelloResolver, PostResolver, UserResolver],
