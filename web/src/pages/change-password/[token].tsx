@@ -43,12 +43,14 @@ const ChangePassword: NextPage<{ token: string }> = ({ token }) => {
 							label='New Password'
 						/>
 						<Box>
-							<Box>
-								{tokenError ? <Box color='red'>{tokenError}</Box> : null}
-							</Box>
-							<NextLink href='/forgot-password'>
-								<Link>Forgot Password?</Link>
-							</NextLink>
+							{tokenError ? (
+								<Box>
+									<Box color='red'>{tokenError}</Box>
+									<NextLink href='/forgot-password'>
+										<Link>New Forgot Password</Link>
+									</NextLink>
+								</Box>
+							) : null}
 						</Box>
 						<Button
 							mt={4}
