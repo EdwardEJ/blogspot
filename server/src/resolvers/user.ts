@@ -3,7 +3,6 @@ import { MyContext } from '../types';
 import {
 	Resolver,
 	Mutation,
-	InputType,
 	Field,
 	Arg,
 	Ctx,
@@ -12,16 +11,11 @@ import {
 } from 'type-graphql';
 import argon2 from 'argon2';
 import { EntityManager } from '@mikro-orm/postgresql';
-import { COOKIE_NAME } from '../constants';
-
-@InputType()
-class UsernamePasswordInput {
-	@Field()
-	username: string;
-
-	@Field()
-	password: string;
-}
+import { COOKIE_NAME, FORGOT_PASSWORD_PREFIX } from '../constants';
+import { UsernamePasswordInput } from './UsernamePasswordInput';
+import { validateRegister } from '../utils/validateRegister';
+import { sendEmail } from '../utils/sendEmail';
+import { v4 as uuid } from 'uuid';
 
 @ObjectType()
 class FieldError {
@@ -43,6 +37,83 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
+	@Mutation(() => UserResponse)
+	async changePassword(
+		@Arg('token') token: string,
+		@Arg('newPassword') newPassword: string,
+		@Ctx() { redis, em }: MyContext
+	): Promise<UserResponse> {
+		if (newPassword.length <= 6) {
+			return {
+				errors: [
+					{
+						field: 'newPassword',
+						message: 'Length must be greater than 6',
+					},
+				],
+			};
+		}
+
+		const key = FORGOT_PASSWORD_PREFIX + token;
+		const userId = await redis.get(key);
+		if (!userId) {
+			return {
+				errors: [
+					{
+						field: 'token',
+						message: 'Token expired',
+					},
+				],
+			};
+		}
+
+		const user = await em.findOne(User, { id: parseInt(userId) });
+
+		if (!user) {
+			return {
+				errors: [
+					{
+						field: 'token',
+						message: 'User does no longer exists',
+					},
+				],
+			};
+		}
+
+		user.password = await argon2.hash(newPassword);
+		await em.persistAndFlush(user);
+		await redis.del(key);
+
+		return { user };
+	}
+
+	@Mutation(() => Boolean)
+	async forgotPassword(
+		@Arg('email') email: string,
+		@Ctx() { em, redis }: MyContext
+	) {
+		const user = await em.findOne(User, { email });
+
+		if (!user) {
+			return true;
+		}
+
+		const token = uuid();
+		await redis.set(
+			FORGOT_PASSWORD_PREFIX + token,
+			user.id,
+			'ex',
+			1000 * 60 * 10
+		); //10 minutes
+
+		await sendEmail(
+			email,
+			`<a href="http://localhost:3000/change-password/${token}">Reset Password</a>`
+		);
+
+		return true;
+	}
+
 	@Query(() => User, { nullable: true })
 	async me(@Ctx() { req, em }: MyContext) {
 		if (!req.session.userId) {
@@ -57,26 +128,9 @@ export class UserResolver {
 		@Arg('options') options: UsernamePasswordInput,
 		@Ctx() { em, req }: MyContext
 	): Promise<UserResponse> {
-		if (options.username.length <= 2) {
-			return {
-				errors: [
-					{
-						field: 'username',
-						message: 'Length must be greater than 2',
-					},
-				],
-			};
-		}
-
-		if (options.password.length <= 6) {
-			return {
-				errors: [
-					{
-						field: 'password',
-						message: 'Length must be greater than 6',
-					},
-				],
-			};
+		const errors = validateRegister(options);
+		if (errors) {
+			return { errors };
 		}
 
 		const hashedPassword = await argon2.hash(options.password);
@@ -87,6 +141,7 @@ export class UserResolver {
 				.getKnexQuery()
 				.insert({
 					username: options.username,
+					email: options.email,
 					password: hashedPassword,
 					created_at: new Date(),
 					updated_at: new Date(),
@@ -113,22 +168,29 @@ export class UserResolver {
 
 	@Mutation(() => UserResponse)
 	async login(
-		@Arg('options') options: UsernamePasswordInput,
+		@Arg('usernameOrEmail') usernameOrEmail: string,
+		@Arg('password') password: string,
 		@Ctx() { em, req }: MyContext
 	): Promise<UserResponse> {
-		const user = await em.findOne(User, { username: options.username });
+		const user = await em.findOne(
+			User,
+			usernameOrEmail.includes('@')
+				? { email: usernameOrEmail }
+				: { username: usernameOrEmail }
+		);
+		console.log(user);
 		if (!user) {
 			return {
 				errors: [
 					{
-						field: 'username',
-						message: 'Username does not exist',
+						field: 'usernameOrEmail',
+						message: 'User does not exist',
 					},
 				],
 			};
 		}
 
-		const validPassword = await argon2.verify(user.password, options.password);
+		const validPassword = await argon2.verify(user.password, password);
 		if (!validPassword) {
 			return {
 				errors: [
