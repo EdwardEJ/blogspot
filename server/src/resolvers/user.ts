@@ -15,7 +15,7 @@ import { COOKIE_NAME, FORGOT_PASSWORD_PREFIX } from '../constants';
 import { UsernamePasswordInput } from './UsernamePasswordInput';
 import { validateRegister } from '../utils/validateRegister';
 import { sendEmail } from '../utils/sendEmail';
-import { v4 as uuid } from 'uuid';
+import { v4 } from 'uuid';
 
 @ObjectType()
 class FieldError {
@@ -98,17 +98,21 @@ export class UserResolver {
 			return true;
 		}
 
-		const token = uuid();
+		const token = v4();
+		console.log(token);
 		await redis.set(
 			FORGOT_PASSWORD_PREFIX + token,
 			user.id,
 			'ex',
-			1000 * 60 * 10
-		); //10 minutes
+			1000 * 60 * 5
+		); //5 minutes
 
 		await sendEmail(
 			email,
-			`<a href="http://localhost:3000/change-password/${token}">Reset Password</a>`
+			`
+			Follow the link to reset your password. After 5 minutes you will need to ask for a new password.
+			<a href="http://localhost:3000/change-password/${token}">Reset password</a>
+			`
 		);
 
 		return true;
