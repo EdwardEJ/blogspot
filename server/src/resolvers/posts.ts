@@ -16,7 +16,6 @@ import {
 } from 'type-graphql';
 import { Post } from '../entities/Post';
 import { getConnection } from 'typeorm';
-import { Upvote } from '../entities/Upvote';
 
 @InputType()
 class PostInput {
