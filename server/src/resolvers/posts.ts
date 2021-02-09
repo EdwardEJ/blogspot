@@ -16,6 +16,7 @@ import {
 } from 'type-graphql';
 import { Post } from '../entities/Post';
 import { getConnection } from 'typeorm';
+import { Upvote } from '../entities/Upvote';
 
 @InputType()
 class PostInput {
@@ -44,7 +45,7 @@ export class PostResolver {
 
 	@Mutation(() => Boolean)
 	@UseMiddleware(isAuth)
-	vote(
+	async vote(
 		@Arg('postId', () => Int) postId: number,
 		@Arg('value', () => Int) value: number,
 		@Ctx() { req }: MyContext
@@ -53,19 +54,50 @@ export class PostResolver {
 		const realValue = isUpvote ? 1 : -1;
 		const { userId } = req.session;
 
-		getConnection().query(
-			`
-		START TRANSACTION;
-    insert into upvote ("userId", "postId", value)
-    values (${userId},${postId},${realValue});
+		const upvote = await Upvote.findOne({ where: { postId, userId } });
 
-    update post
-    set points = points + ${realValue}
-    where id = ${postId};
+		if (upvote && upvote.value !== realValue) {
+			//updating previous vote
+			await getConnection().transaction(async (tm) => {
+				await tm.query(
+					`
+					update upvote
+					set value = $1
+					where "postId" = $2 and "userId" = $3
+					`,
+					[realValue, postId, userId]
+				);
 
-    COMMIT;
-		`
-		);
+				await tm.query(
+					`
+					update post
+					set points = points + $1
+					where id = $2
+					`,
+					[2 * realValue, postId]
+				);
+			});
+		} else if (!upvote) {
+			//hasnt voted before
+			await getConnection().transaction(async (tm) => {
+				await tm.query(
+					`
+				insert into upvote ("userId", "postId", value)
+    		values ($1, $2. $3)
+				`,
+					[userId, postId, realValue]
+				);
+				await tm.query(
+					`
+				update post
+    		set points = points + $1
+    		where id = $2
+				`,
+					[realValue, postId]
+				);
+			});
+		} else {
+		}
 
 		return true;
 	}
