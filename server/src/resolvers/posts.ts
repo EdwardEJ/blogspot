@@ -16,6 +16,7 @@ import {
 } from 'type-graphql';
 import { Post } from '../entities/Post';
 import { getConnection } from 'typeorm';
+import { Upvote } from '../entities/Upvote';
 
 @InputType()
 class PostInput {
@@ -42,6 +43,34 @@ export class PostResolver {
 		return root.text.slice(0, 50);
 	}
 
+	@Mutation(() => Boolean)
+	@UseMiddleware(isAuth)
+	vote(
+		@Arg('postId', () => Int) postId: number,
+		@Arg('value', () => Int) value: number,
+		@Ctx() { req }: MyContext
+	) {
+		const isUpvote = value !== -1;
+		const realValue = isUpvote ? 1 : -1;
+		const { userId } = req.session;
+
+		getConnection().query(
+			`
+		START TRANSACTION;
+    insert into upvote ("userId", "postId", value)
+    values (${userId},${postId},${realValue});
+
+    update post
+    set points = points + ${realValue}
+    where id = ${postId};
+
+    COMMIT;
+		`
+		);
+
+		return true;
+	}
+
 	@Query(() => PaginatedPosts)
 	async posts(
 		@Arg('limit', () => Int) limit: number,
@@ -65,7 +94,7 @@ export class PostResolver {
       'email', u.email,
       'createdAt', u."createdAt",
       'updatedAt', u."updatedAt"
-      ) originalPoster
+      ) creator
     from post p
     inner join public.user u on u.id = p."creatorId"
     ${cursor ? `where p."createdAt" < $2` : ''}
