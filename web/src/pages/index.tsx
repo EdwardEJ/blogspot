@@ -7,7 +7,11 @@ import { Link } from '@chakra-ui/react';
 import React from 'react';
 
 const Index = () => {
-	const [{ data }] = usePostsQuery();
+	const [{ data }] = usePostsQuery({
+		variables: {
+			limit: 10,
+		},
+	});
 
 	return (
 		<Layout>
