@@ -18,11 +18,11 @@ export class User extends BaseEntity {
 	@PrimaryGeneratedColumn()
 	id!: number;
 
-	@Field(() => String)
+	@Field()
 	@Column({ unique: true })
 	username!: string;
 
-	@Field(() => String)
+	@Field()
 	@Column({ unique: true })
 	email!: string;
 

@@ -19,11 +19,11 @@ export class Post extends BaseEntity {
 	@PrimaryGeneratedColumn()
 	id!: number;
 
-	@Field(() => String)
+	@Field()
 	@Column()
 	title!: string;
 
-	@Field(() => String)
+	@Field()
 	@Column()
 	text!: string;
 
@@ -38,7 +38,7 @@ export class Post extends BaseEntity {
 	@Column()
 	creatorId: number;
 
-	@Field()
+	@Field(() => User)
 	@ManyToOne(() => User, (user) => user.posts)
 	creator: User;
 
