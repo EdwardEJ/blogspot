@@ -9,7 +9,6 @@ import {
 	Center,
 	Flex,
 	Heading,
-	IconButton,
 	Link,
 	Stack,
 	Text,
