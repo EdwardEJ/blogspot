@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import React from 'react';
 import { InputField } from '../components/InputField';
 import { Layout } from '../components/Layout';
+import { TextAreaBox } from '../components/TextAreaBox';
 import { useCreatePostMutation } from '../generated/graphql';
 import { createUrqlClient } from '../utils/createUrqlClient';
 import { useIsAuth } from '../utils/useIsAuth';
@@ -27,7 +28,7 @@ const CreatePost: React.FC<{}> = ({}) => {
 					<Form>
 						<InputField name='title' placeholder='title' label='Title' />
 						<Box mt={4}>
-							<InputField
+							<TextAreaBox
 								name='text'
 								placeholder='text field...'
 								label='Body'
