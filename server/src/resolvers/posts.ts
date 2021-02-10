@@ -1,22 +1,22 @@
-import { isAuth } from '../middleware/isAuth';
-import { MyContext } from '../types';
 import {
-	Resolver,
-	Query,
 	Arg,
-	Mutation,
-	InputType,
 	Ctx,
 	Field,
-	UseMiddleware,
-	Int,
 	FieldResolver,
-	Root,
+	InputType,
+	Int,
+	Mutation,
 	ObjectType,
+	Query,
+	Resolver,
+	Root,
+	UseMiddleware,
 } from 'type-graphql';
-import { Post } from '../entities/Post';
 import { getConnection } from 'typeorm';
+import { Post } from '../entities/Post';
 import { Upvote } from '../entities/Upvote';
+import { isAuth } from '../middleware/isAuth';
+import { MyContext } from '../types';
 
 @InputType()
 class PostInput {
@@ -83,7 +83,7 @@ export class PostResolver {
 				await tm.query(
 					`
 				insert into upvote ("userId", "postId", value)
-    		values ($1, $2. $3)
+    		values ($1, $2, $3)
 				`,
 					[userId, postId, realValue]
 				);
@@ -96,7 +96,6 @@ export class PostResolver {
 					[realValue, postId]
 				);
 			});
-		} else {
 		}
 
 		return true;
@@ -105,12 +104,13 @@ export class PostResolver {
 	@Query(() => PaginatedPosts)
 	async posts(
 		@Arg('limit', () => Int) limit: number,
-		@Arg('cursor', () => String, { nullable: true }) cursor: string | null
+		@Arg('cursor', () => String, { nullable: true }) cursor: string | null,
+		@Ctx() { req }: MyContext
 	): Promise<PaginatedPosts> {
 		const realLimit = Math.min(50, limit);
 		const realLimitPlusOne = realLimit + 1;
 
-		const replacements: any[] = [realLimitPlusOne];
+		const replacements: any[] = [realLimitPlusOne, req.session.userId];
 
 		if (cursor) {
 			replacements.push(new Date(parseInt(cursor)));
@@ -125,10 +125,15 @@ export class PostResolver {
       'email', u.email,
       'createdAt', u."createdAt",
       'updatedAt', u."updatedAt"
-      ) creator
+      ) creator,
+		${
+			req.session.userId
+				? '(select value from upvote where "userId" = $2 and "postId" = p.id) "voteStatus"'
+				: 'null as "voteStatus"'
+		}
     from post p
     inner join public.user u on u.id = p."creatorId"
-    ${cursor ? `where p."createdAt" < $2` : ''}
+    ${cursor ? `where p."createdAt" < $3` : ''}
     order by p."createdAt" DESC
     limit $1
     `,
