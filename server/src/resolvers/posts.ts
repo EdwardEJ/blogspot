@@ -63,17 +63,17 @@ export class PostResolver {
 					`
 					update upvote
 					set value = $1
-					where "postId" = $2 and "userId" = $3
-					`,
+    			where "postId" = $2 and "userId" = $3
+        `,
 					[realValue, postId, userId]
 				);
 
 				await tm.query(
 					`
-					update post
-					set points = points + $1
-					where id = $2
-					`,
+          update post
+          set points = points + $1
+          where id = $2
+        `,
 					[2 * realValue, postId]
 				);
 			});
@@ -82,9 +82,9 @@ export class PostResolver {
 			await getConnection().transaction(async (tm) => {
 				await tm.query(
 					`
-				insert into upvote ("userId", "postId", value)
-    		values ($1, $2, $3)
-				`,
+					insert into upvote ("userId", "postId", value)
+					values ($1, $2, $3)
+        `,
 					[userId, postId, realValue]
 				);
 				await tm.query(
@@ -124,7 +124,7 @@ export class PostResolver {
 
 		const posts = await getConnection().query(
 			`
-   select p.*,
+    select p.*,
     json_build_object(
       'id', u.id,
       'username', u.username,
@@ -132,14 +132,14 @@ export class PostResolver {
       'createdAt', u."createdAt",
       'updatedAt', u."updatedAt"
       ) creator,
-		${
+    ${
 			req.session.userId
 				? '(select value from upvote where "userId" = $2 and "postId" = p.id) "voteStatus"'
 				: 'null as "voteStatus"'
 		}
     from post p
     inner join public.user u on u.id = p."creatorId"
-    ${cursor ? `where p."createdAt" < ${cursorIdx}` : ''}
+    ${cursor ? `where p."createdAt" < $${cursorIdx}` : ''}
     order by p."createdAt" DESC
     limit $1
     `,
