@@ -33,7 +33,7 @@ export const NavBar: React.FC<NavBarProps> = ({}) => {
 	} else {
 		//user is logged in
 		body = (
-			<Flex>
+			<Flex align='baseline'>
 				<Box color='white' mr={4}>
 					{data.me.username}
 				</Box>
@@ -56,12 +56,21 @@ export const NavBar: React.FC<NavBarProps> = ({}) => {
 			p={4}
 			bg='tomato'
 			align='baseline'>
-			<NextLink href='/'>
-				<Link>
-					<Heading>Blog Spot</Heading>
-				</Link>
-			</NextLink>
-			<Box ml={'auto'}>{body}</Box>
+			<Flex flex={1} m='auto' align='center' maxW={800}>
+				<NextLink href='/'>
+					<Link>
+						<Heading>Blog Spot</Heading>
+					</Link>
+				</NextLink>
+				<Flex align='baseline' ml='auto'>
+					<NextLink href='/create-post'>
+						<Button mr={4} colorScheme='teal' as={Link}>
+							Create Post
+						</Button>
+					</NextLink>
+					<Box ml={'auto'}>{body}</Box>
+				</Flex>
+			</Flex>
 		</Flex>
 	);
 };

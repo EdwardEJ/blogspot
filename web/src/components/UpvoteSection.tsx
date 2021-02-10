@@ -1,4 +1,4 @@
-import { ChevronUpIcon, ChevronDownIcon } from '@chakra-ui/icons';
+import { ArrowDownIcon, ArrowUpIcon } from '@chakra-ui/icons';
 import { Flex, IconButton } from '@chakra-ui/react';
 import React, { useState } from 'react';
 import { PostSnippetFragment, useVoteMutation } from '../generated/graphql';
@@ -16,7 +16,7 @@ export const UpvoteSection: React.FC<UpvoteSectionProps> = ({ post }) => {
 	return (
 		<Flex direction='column' justifyContent='center' alignItems='center' mr={4}>
 			<IconButton
-				icon={<ChevronUpIcon />}
+				icon={<ArrowUpIcon />}
 				onClick={async () => {
 					if (post.voteStatus === 1) {
 						return;
@@ -32,11 +32,10 @@ export const UpvoteSection: React.FC<UpvoteSectionProps> = ({ post }) => {
 				isLoading={loadingState === 'upvote-loading'}
 				colorScheme={post.voteStatus === 1 ? 'green' : undefined}
 				aria-label='Upvote Post'
-				size='sm'
 			/>
 			{post.points}
 			<IconButton
-				icon={<ChevronDownIcon />}
+				icon={<ArrowDownIcon />}
 				onClick={async () => {
 					if (post.voteStatus === -1) {
 						return;
@@ -52,7 +51,6 @@ export const UpvoteSection: React.FC<UpvoteSectionProps> = ({ post }) => {
 				isLoading={loadingState === 'downvote-loading'}
 				colorScheme={post.voteStatus === -1 ? 'red' : undefined}
 				aria-label='Downvote Post'
-				size='sm'
 			/>
 		</Flex>
 	);
